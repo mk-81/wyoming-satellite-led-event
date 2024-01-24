@@ -1,2 +1,2 @@
 from .led_controller import AbstractLedController
-from .led_pattern import AbstractLedPattern, GenericLedPattern
+from .led_pattern import LedPatternRunner, AbstractLedPattern, GenericLedPattern

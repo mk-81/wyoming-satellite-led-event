@@ -38,32 +38,56 @@ class LedPattern(GenericLedPattern):
 
     async def stop(self) -> None:
         self._active = False
-        for i in range(int(round(self.led_controller.num_led / 2)) + 1):
-            self.led_controller.set_led_color(i, *_BLACK)
-            self.led_controller.set_led_color(self.led_controller.num_led - i, *_BLACK)
+        middle = int(round(self.led_controller.num_led / 2))
+        for i in range(middle):
+            self.led_controller.set_led_color(middle - i - 1, *_BLACK)
+            self.led_controller.set_led_color(middle + i,     *_BLACK)
 
             self.led_controller.show()
             await asyncio.sleep(0.02)
 
+#        for i in range(int(round(self.led_controller.num_led / 2)) + 1):
+#            self.led_controller.set_led_color(i, *_BLACK)
+#            self.led_controller.set_led_color(self.led_controller.num_led - i, *_BLACK)
+#
+#            self.led_controller.show()
+#            await asyncio.sleep(0.02)
 
 
     async def wakeup(self) -> None:
         self._active = True
 
-        brightness = 50
-        for i in range(int(round(self.led_controller.num_led / 2)) + 1):
-            brightness += 5
-            self.led_controller.set_led_color(i, *_WHITE, brightness)
-            if i > 0:
-                self.led_controller.set_led_color(self.led_controller.num_led - i,  *_WHITE, brightness)
+        steps = int(round(self.led_controller.num_led / 2))
+        brightness_stepwidth = int(round(50/steps))
+        brightness = max(100 - brightness_stepwidth * steps, 0)
 
-            if i > 1:
-                self.led_controller.set_led_color(i - 2, *_BLUE, brightness)
-                if i > 2:
-                    self.led_controller.set_led_color(self.led_controller.num_led - i + 2, *_BLUE, brightness)
+        for i in range(steps):
+            brightness = min(brightness + brightness_stepwidth, 100)
+            self.led_controller.set_led_color(i, *_WHITE, brightness)
+            self.led_controller.set_led_color(self.led_controller.num_led - i - 1,  *_WHITE, brightness)
+
+            if i >= 1:
+                self.led_controller.set_led_color(i - 1, *_BLUE, brightness)
+                self.led_controller.set_led_color(self.led_controller.num_led - i, *_BLUE, brightness)
 
             self.led_controller.show()
             await asyncio.sleep(0.02)
+
+
+#        brightness = 50
+#        for i in range(int(round(self.led_controller.num_led / 2)) + 1):
+#            brightness += 5
+#            self.led_controller.set_led_color(i, *_WHITE, brightness)
+#            if i > 0:
+#                self.led_controller.set_led_color(self.led_controller.num_led - i,  *_WHITE, brightness)
+#
+#            if i > 1:
+#                self.led_controller.set_led_color(i - 2, *_BLUE, brightness)
+#                if i > 2:
+#                    self.led_controller.set_led_color(self.led_controller.num_led - i + 2, *_BLUE, brightness)
+#
+#            self.led_controller.show()
+#            await asyncio.sleep(0.02)
 
         await asyncio.sleep(0.5)
 
@@ -75,28 +99,16 @@ class LedPattern(GenericLedPattern):
     async def think(self) -> None:
         self._active = True
 
-        first = _BLUE
-        second = _WHITE
-
-        while not self.has_pending_event():
-            for i in range(1, self.led_controller.num_led + 1):
-                if self.has_pending_event():
-                    break
-
-                if i % 2 == 0:
-                    self.led_controller.set_led_color(i - 1, *first)
+        o = 0
+        while True:
+            o = (o + 1) % 2 #o = offset can be either zero or one and is used to switch between blue and white on the led for each iteration
+            for i in range(0, self.led_controller.num_led):
+                if (i + o) % 2 == 0:
+                    self.led_controller.set_led_color(i, *_BLUE)
                 else:
-                    self.led_controller.set_led_color(i - 1, *second)
+                    self.led_controller.set_led_color(i, *_WHITE)
 
             self.led_controller.show()
-
-            if first == _BLUE:
-                first = _WHITE
-                second = _BLUE
-            else:
-                first = _BLUE
-                second = _WHITE
-
             await asyncio.sleep(0.15)
 
 
@@ -104,17 +116,15 @@ class LedPattern(GenericLedPattern):
         self._active = True
 
         direction = 1
-        red = 255
-        green = 255
+        val = 255
 
         self.color(*_WHITE, show=False)
 
-        while not self.has_pending_event():
-            self.color(red=red, green=green, blue=255)
+        while True:
+            self.color(red=val, green=val, blue=255)
 
-            red -= direction
-            green -= direction
-            if red >= 255 or red <= 0:
+            val -= direction
+            if val >= 255 or val <= 0:
                 direction *= -1
 
             await asyncio.sleep(0.002)
@@ -136,7 +146,7 @@ class LedPattern(GenericLedPattern):
 
         brightness = max_brightness
 
-        while not self.has_pending_event():
+        while True:
             self.color(*_RED, brightness)
             if brightness <= min_brightness or brightness >= max_brightness:
                 step = step * -1

@@ -8,7 +8,7 @@ import sys
 from functools import partial
 from wyoming.server import AsyncEventHandler, AsyncServer
 from wyoming.event import Event
-from .base import AbstractLedPattern
+from .base import LedPatternRunner, AbstractLedPattern
 
 _LOGGER   = logging.getLogger()
 _PCK_NAME = "wyoming_satellite_led_event"
@@ -102,7 +102,8 @@ class EventHandler(AsyncEventHandler):
     ) -> None:
         super().__init__(*args, **kwargs)
 
-        self.led_pattern : AbstractLedPattern = led_pattern
+        self.led_pattern : LedPatternRunner = LedPatternRunner(led_pattern)
+        self.led_pattern.setup()
         self.client_id = str(time.monotonic_ns())
 
         _LOGGER.debug("Client connected: %s", self.client_id)
@@ -111,7 +112,7 @@ class EventHandler(AsyncEventHandler):
         _LOGGER.debug(event)
 
         if self.led_pattern:
-            await self.led_pattern.push_event(event)
+            await self.led_pattern.handle_event(event)
 
         return True
 

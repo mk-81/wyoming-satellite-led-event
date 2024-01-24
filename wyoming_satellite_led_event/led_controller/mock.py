@@ -20,9 +20,7 @@ class LedController(AbstractLedController):
         self._color[led_num] = (red, green, blue, bright_percent)
 
     def show(self):
-        for c in self._color:
-            print(c)
-
+        print(self._color)
 
     def cleanup(self):
         self._color = None
