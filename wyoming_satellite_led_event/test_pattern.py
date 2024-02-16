@@ -19,29 +19,56 @@ from wyoming.satellite import SatelliteConnected, SatelliteDisconnected, Streami
 
 async def test_successfull(runner : LedPatternRunner):
     print("wake -> listen to voice command -> think -> speak")
-    #ToDo -> real events from Log
 
-    await runner.handle_event(Detection().event())
+    # two played-events (after transcribe and first after audio-stop) are from the response sounds
+
+    # Jan 26 11:03:05 Event(type='run-pipeline', data={'start_stage': 'asr', 'end_stage': 'tts', 'restart_on_end': False}, payload=None)
+    # Jan 26 11:03:05 Event(type='detection', data={'name': 'jarvis', 'timestamp': 49791777435851}, payload=None)
+    # Jan 26 11:03:05 Event(type='streaming-started', data=None, payload=None)
+    # Jan 26 11:03:05 Event(type='transcribe', data={'language': 'de'}, payload=None)
+    # Jan 26 11:03:07 Event(type='voice-started', data={'timestamp': 655}, payload=None)
+    # Jan 26 11:03:08 Event(type='voice-stopped', data={'timestamp': 1155}, payload=None)
+    # Jan 26 11:03:17 Event(type='transcript', data={'text': 'you will never understand'}, payload=None)
+    # Jan 26 11:03:17 Event(type='streaming-stopped', data=None, payload=None)
+    # Jan 26 11:03:17 Event(type='synthesize', data={'text': 'Entschuldigung, das habe ich nicht verstanden', 'voice': {'name': 'de_DE-thorsten-high'}}, payload=None)
+    # Jan 26 11:03:17 Event(type='audio-start', data={'rate': 16000, 'width': 2, 'channels': 1, 'timestamp': 0}, payload=None)
+    # Jan 26 11:03:17 Event(type='audio-stop', data={'timestamp': 2.3943125000000016}, payload=None)
+    # Jan 26 11:03:19 Event(type='played', data=None, payload=None)
+
+    await runner.handle_event(RunPipeline(start_stage=PipelineStage(PipelineStage.ASR), end_stage=PipelineStage(PipelineStage.TTS), restart_on_end=False).event())
+    await runner.handle_event(Detection(name='jarvis', timestamp=49791777435851).event())
+    await runner.handle_event(StreamingStarted().event())
+    await runner.handle_event(Transcribe(language='en').event())
     await asyncio.sleep(3)
-    await runner.handle_event(VoiceStarted().event())
-    await asyncio.sleep(3)
-    await runner.handle_event(VoiceStopped().event())
-    await asyncio.sleep(3)
-    await runner.handle_event(AudioStart(rate=16000, width=32, channels=1).event())
-    await asyncio.sleep(3)
+    await runner.handle_event(VoiceStarted(timestamp=1135).event())
+    await asyncio.sleep(1)
+    await runner.handle_event(VoiceStopped(timestamp=1615).event())
+    await asyncio.sleep(5)
+    await runner.handle_event(Transcript(text="you will never understand").event())
+    await runner.handle_event(StreamingStopped().event())
+    await runner.handle_event(AudioStart(rate=1600, width=2, channels=1, timestamp=0).event())
+    await runner.handle_event(AudioStop(timestamp=2.3943125000000016).event())
+    await asyncio.sleep(2)
     await runner.handle_event(Played().event())
+
 
 
 async def test_erroneous(runner : LedPatternRunner):
     print("wake -> listen to voice command -> error")
-    #ToDo -> real events from Log
-    await runner.handle_event(Detection().event())
-    await asyncio.sleep(3)
-    await runner.handle_event(VoiceStarted().event())
-    await asyncio.sleep(3)
-    await runner.handle_event(VoiceStopped().event())
-    await asyncio.sleep(3)
-    await runner.handle_event(Error(text="test").event())
+
+    # Jan 28 23:38:24 Event(type='run-pipeline', data={'start_stage': 'asr', 'end_stage': 'tts', 'restart_on_end': False}, payload=None)
+    # Jan 28 23:38:24 Event(type='detection', data={'name': 'jarvis', 'timestamp': 1325532938188}, payload=None)
+    # Jan 28 23:38:24 Event(type='streaming-started', data=None, payload=None)
+    # Jan 28 23:38:24 Event(type='transcribe', data={'language': 'de'}, payload=None)
+    # Jan 28 23:38:24 Event(type='error', data={'text': 'speech-to-text failed', 'code': 'stt-stream-failed'}, payload=None)
+    # Jan 28 23:38:24 Event(type='streaming-stopped', data=None, payload=None)
+
+    await runner.handle_event(RunPipeline(start_stage=PipelineStage(PipelineStage.ASR), end_stage=PipelineStage(PipelineStage.TTS), restart_on_end=False).event())
+    await runner.handle_event(Detection(name='jarvis', timestamp=1325532938188).event())
+    await runner.handle_event(StreamingStarted().event())
+    await runner.handle_event(Transcribe(language='en').event())
+    await runner.handle_event(Error(text="speech-to-text failed", code="stt-stream-failed").event())
+    await runner.handle_event(StreamingStopped().event())
 
 
 # voice command which has been cancelled via cancel commang (e.g. nevermind)

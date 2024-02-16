@@ -137,6 +137,7 @@ class LedPattern(GenericLedPattern):
             self.color(*_BLACK)
             await asyncio.sleep(0.3)
         self.color(*_RED) # "off" Animation from red not black
+        await asyncio.sleep(0.3)
         await self.stop()
 
     async def disconnected(self) -> None:

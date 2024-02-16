@@ -174,6 +174,13 @@ class LedPatternRunner():
 
     async def __event_queue_runner(self):
         wyoming_event : Event
+        timeout = None
+
+        def __timeout(new):
+            if timeout is None:
+                return new
+            else:
+                return min(timeout,new)
 
         while True:
             try:
@@ -183,30 +190,37 @@ class LedPatternRunner():
 
                 while True:
                     process_event = False
-                    if timeout is None:
-                        wyoming_event = await self.__event_queue.get()
-                        timeout = 0.01
-                    else:
-                        try:
-                            wyoming_event = await asyncio.wait_for(self.__event_queue.get(), timeout=timeout)
-                        except asyncio.TimeoutError:
-                            process_event = True
+
+                    try:
+                        async with asyncio.timeout(timeout):
+                            wyoming_event = await self.__event_queue.get()
+                    except TimeoutError:
+                        process_event = True
 
                     pattern_event = LedPatternRunner.translate_event(wyoming_event, next_state) or pattern_event
-                    if pattern_event in ( _EVENTS.CONNECTED, _EVENTS.LISTEN_END, _EVENTS.THINK_END, _EVENTS.SPEAK_END, _EVENTS.ERROR ):
+                    if pattern_event in ( _EVENTS.CONNECTED, _EVENTS.LISTEN_END, _EVENTS.THINK_END, _EVENTS.SPEAK_END ):
                         next_state = AbstractLedPattern.STATE.IDLE
+                        timeout = __timeout(0.250)
+
+                    elif pattern_event == _EVENTS.ERROR:
+                        next_state = AbstractLedPattern.STATE.IDLE
+                        timeout = __timeout(0)
 
                     elif pattern_event == _EVENTS.DISCONNECTED:
                         next_state = AbstractLedPattern.STATE.DISCONNECTED
+                        timeout = __timeout(0)
 
                     elif pattern_event in ( _EVENTS.WAKEUP, _EVENTS.LISTEN_START ):
                         next_state = AbstractLedPattern.STATE.LISTENING
+                        timeout = __timeout(0)
 
                     elif pattern_event == _EVENTS.THINK_START:
                         next_state = AbstractLedPattern.STATE.THINKING
+                        timeout = __timeout(0.250)
 
                     elif pattern_event == _EVENTS.SPEAK_START:
                         next_state = AbstractLedPattern.STATE.SPEAKING
+                        timeout = __timeout(0.250)
 
                     if process_event:
                         break
